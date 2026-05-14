@@ -57,6 +57,10 @@ if (REDIS_URL && REDIS_URL !== 'value' && (REDIS_URL.startsWith('redis') || REDI
     const pubClient = createClient({ url: REDIS_URL });
     const subClient = pubClient.duplicate();
 
+    // Bắt lỗi Redis để không bị Crash Node.js
+    pubClient.on('error', (err) => console.error('Lỗi Redis Pub:', err.message));
+    subClient.on('error', (err) => console.error('Lỗi Redis Sub:', err.message));
+
     Promise.all([pubClient.connect(), subClient.connect()])
       .then(() => {
           io.adapter(createAdapter(pubClient, subClient));
