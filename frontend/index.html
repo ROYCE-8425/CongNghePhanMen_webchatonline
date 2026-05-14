@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Realtime Chat</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Sử dụng font chữ hiện đại từ Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-info">
+                <h1>Global Chat</h1>
+                <p class="status">
+                    <span class="pulse-dot"></span>
+                    <span id="online-status">Đang kết nối...</span>
+                </p>
+            </div>
+            <div class="user-badge" id="my-identity">IP: Đang lấy...</div>
+        </header>
+
+        <!-- Nơi hiển thị tin nhắn -->
+        <main class="chat-messages" id="chat-messages">
+            <!-- Tin nhắn sẽ được JS chèn vào đây -->
+        </main>
+
+        <!-- Khu vực nhập liệu -->
+        <footer class="chat-input-area">
+            <input type="text" id="message-input" placeholder="Nhập tin nhắn ẩn danh của bạn..." autocomplete="off">
+            <button id="send-btn" title="Gửi tin nhắn">
+                <!-- Icon Gửi -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </footer>
+    </div>
+
+    <!-- Tải Socket.io Client từ CDN (Phù hợp cho GitHub Pages) -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
