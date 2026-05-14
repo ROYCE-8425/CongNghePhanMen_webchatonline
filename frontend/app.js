@@ -1,7 +1,7 @@
 // QUAN TRỌNG: 
 // Khi bạn deploy Backend lên mạng (ví dụ Render.com), hãy đổi URL này thành URL của Backend.
 // Ví dụ: const BACKEND_URL = 'https://my-chat-backend.onrender.com';
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = 'https://congnghephanmen-webchatonline.onrender.com';
 
 const socket = io(BACKEND_URL);
 
