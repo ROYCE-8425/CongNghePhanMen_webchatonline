@@ -12,23 +12,21 @@ const server = http.createServer(app);
 // Quan trọng: Cấu hình CORS để Frontend từ GitHub Pages có thể gọi vào
 const io = new Server(server, {
     cors: {
-        origin: "*", // Cho phép mọi domain kết nối (bao gồm cả GitHub Pages)
+        origin: "*", 
         methods: ["GET", "POST"]
     }
 });
 
-// Cho phép các request HTTP thông thường (nếu cần)
 app.use(cors());
 
-// ==========================================
-// 1. KẾT NỐI MONGODB LƯU TRỮ VĨNH VIỄN
-// ==========================================
-// Thay chuỗi này bằng chuỗi kết nối MongoDB Atlas của bạn khi deploy thực tế
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/chat_db';
+// ---- BIẾN LƯU TẠM (Trường hợp chưa điền Link Database) ----
+const memoryMessages = [];
+let isMongoConnected = false;
 
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ Đã kết nối MongoDB thành công!'))
-  .catch(err => console.error('❌ Lỗi kết nối MongoDB:', err));
+// ==========================================
+// 1. KẾT NỐI MONGODB
+// ==========================================
+const MONGO_URI = process.env.MONGO_URI;
 
 // Schema Tin nhắn
 const messageSchema = new mongoose.Schema({
@@ -38,41 +36,51 @@ const messageSchema = new mongoose.Schema({
 });
 const Message = mongoose.model('Message', messageSchema);
 
+// CHỐNG CRASH: Chỉ kết nối nếu có link xịn, nếu điền chữ "value" thì bỏ qua
+if (MONGO_URI && MONGO_URI !== 'value' && MONGO_URI.startsWith('mongodb')) {
+    mongoose.connect(MONGO_URI)
+      .then(() => {
+          console.log('✅ Đã kết nối MongoDB Cloud!');
+          isMongoConnected = true;
+      })
+      .catch(err => console.error('❌ Lỗi MongoDB:', err));
+} else {
+    console.log('⚠️ Đang chạy chế độ KHÔNG-DATABASE (Lưu tạm vào RAM).');
+}
+
 // ==========================================
-// 2. KẾT NỐI REDIS LÀM PUB/SUB BROKER
+// 2. KẾT NỐI REDIS PUB/SUB
 // ==========================================
-// Thay bằng URL của Redis Labs / Upstash khi deploy
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL;
 
-const pubClient = createClient({ url: REDIS_URL });
-const subClient = pubClient.duplicate();
+if (REDIS_URL && REDIS_URL !== 'value' && (REDIS_URL.startsWith('redis') || REDIS_URL.startsWith('rediss'))) {
+    const pubClient = createClient({ url: REDIS_URL });
+    const subClient = pubClient.duplicate();
 
-Promise.all([pubClient.connect(), subClient.connect()])
-  .then(() => {
-      // Tích hợp Redis vào hệ thống Socket.io để scale nhiều server
-      io.adapter(createAdapter(pubClient, subClient));
-      console.log('✅ Đã kết nối Redis Pub/Sub thành công!');
-  })
-  .catch(err => console.error('❌ Lỗi kết nối Redis:', err));
+    Promise.all([pubClient.connect(), subClient.connect()])
+      .then(() => {
+          io.adapter(createAdapter(pubClient, subClient));
+          console.log('✅ Đã kết nối Redis Cloud!');
+      })
+      .catch(err => console.error('❌ Lỗi kết nối Redis:', err));
+} else {
+    console.log('⚠️ Không dùng Redis Pub/Sub (Chạy Server đơn).');
+}
 
-
-// Route cơ bản để ping kiểm tra server có sống không
+// Route cơ bản
 app.get('/', (req, res) => {
-    res.send('Backend Hệ thống Chat Realtime đã hoạt động (WS + Redis + Mongo)');
+    res.send('Backend Realtime Chat đang hoạt động tốt!');
 });
 
 // ==========================================
-// 3. XỬ LÝ WEBSOCKET LÕI
+// 3. XỬ LÝ WEBSOCKET
 // ==========================================
 io.on('connection', (socket) => {
-    // Thu thập IP thật của người dùng
     let clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
     
-    // Rút gọn IP để hiển thị đẹp hơn
     if (clientIp === '::1' || clientIp.includes('127.0.0.1')) {
         clientIp = 'Local';
     } else {
-        // Cắt bớt đuôi IP để bảo mật (VD: 113.22.x.x)
         const parts = clientIp.split('.');
         if(parts.length === 4) clientIp = `${parts[0]}.${parts[1]}.x.x`;
     }
@@ -80,39 +88,41 @@ io.on('connection', (socket) => {
     const username = `ẨnDanh_${clientIp}`;
     console.log(`🔌 Kết nối mới: ${username}`);
 
-    // Báo cho chính client biết họ đang mang định danh gì
     socket.emit('your_identity', { username: username });
 
-    // Truy xuất 50 tin nhắn gần nhất từ MongoDB và gửi xuống cho Client
-    Message.find().sort({createdAt: 1}).limit(50).then(messages => {
-        socket.emit('chat_history', messages);
-    });
+    // Gửi lịch sử chat
+    if (isMongoConnected) {
+        Message.find().sort({createdAt: 1}).limit(50).then(messages => {
+            socket.emit('chat_history', messages);
+        });
+    } else {
+        // Trả về mảng lưu tạm nếu chưa có DB
+        socket.emit('chat_history', memoryMessages);
+    }
 
-    // Xử lý khi Client gửi tin nhắn lên
+    // Nhận tin nhắn
     socket.on('send_message', async (data) => {
         if (!data.content || data.content.trim() === '') return;
         
-        // 1. Lưu vào cơ sở dữ liệu MongoDB
-        const newMsg = new Message({ 
-            user: username, 
-            content: data.content 
-        });
-        await newMsg.save();
+        const newMsgObj = { user: username, content: data.content, createdAt: new Date() };
 
-        // 2. Phát sóng (Broadcast) tin nhắn này tới toàn bộ Client
-        // Nhờ có Redis, lệnh emit này sẽ chọc sang các Node Server khác để phát chung
-        io.emit('receive_message', newMsg);
+        if (isMongoConnected) {
+            const newMsg = new Message(newMsgObj);
+            await newMsg.save();
+            io.emit('receive_message', newMsg);
+        } else {
+            // Chế độ lưu tạm
+            memoryMessages.push(newMsgObj);
+            if (memoryMessages.length > 50) memoryMessages.shift(); // Chỉ giữ 50 tin mới nhất
+            io.emit('receive_message', newMsgObj);
+        }
     });
 
-    // Khi người dùng đóng tab
     socket.on('disconnect', () => {
         console.log(`❌ Đã thoát: ${username}`);
     });
 });
 
-// ==========================================
-// KHỞI CHẠY SERVER
-// ==========================================
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Máy chủ Backend đang chạy tại port ${PORT}`);
