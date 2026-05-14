@@ -52,8 +52,8 @@ npm start
    *   **Build Command:** Gõ `npm install`
    *   **Start Command:** Gõ `npm start`
 4. (Tuỳ chọn) Ở phần **Environment**, thêm các biến môi trường nếu bạn muốn lưu dữ liệu vĩnh viễn:
-   *   `MONGO_URI`: Đường link kết nối MongoDB Atlas (VD: `mongodb+srv://...`).
-   *   `REDIS_URL`: Đường link kết nối Redis Upstash (VD: `rediss://...`).
+   *   `MONGO_URI`: Đường link kết nối MongoDB Atlas (https://console.upstash.com/) (VD: `mongodb+srv://...`).
+   *   `REDIS_URL`: Đường link kết nối Redis Upstash (https://www.mongodb.com/) (VD: `rediss://...`).
 5. Cuộn xuống dưới cùng và bấm **Deploy**. Đợi Render tải xong báo chữ `Live` màu xanh lá cây.
 6. Copy đường link URL mà Render cấp cho máy chủ của bạn (Ví dụ: `https://ten-app.onrender.com`).
 
