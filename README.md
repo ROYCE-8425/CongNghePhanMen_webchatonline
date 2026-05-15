@@ -13,9 +13,10 @@ Dự án này là một ứng dụng Web Chat thời gian thực (Real-time), ch
 ## 🚀 Hướng Dẫn Cài Đặt & Chạy Trực Tiếp Trên Máy (Local)
 
 ### 1. Yêu cầu môi trường
-*   Máy tính đã cài đặt [Node.js](https://nodejs.org/) (Khuyên dùng bản LTS).
+*   Máy tính đã cài đặt [Node.js](https://nodejs.org/) (Khuyên dùng bản LTS)
+  Nếu bạn chưa cài chạy lệnh này ở CMD or powersell ở máy window (winget install OpenJS.NodeJS.LTS)
 *   Đã cài đặt [Git](https://git-scm.com/).
-
+ Nếu bạn chưa cài chạy lệnh này ở CMD or powersell ở máy window (winget install Git.Git)
 ### 2. Tải Source Code (Clone)
 Mở Terminal/Command Prompt tại nơi bạn muốn lưu code và chạy lệnh:
 ```bash
